@@ -224,6 +224,239 @@ function signBoard(
   ctx.restore();
 }
 
+// ── Soda ──────────────────────────────────────────────────────────────────
+
+/** A soda bottle standing on a screen point, `size` times the usual size. */
+function bottle(ctx: Ctx, x: number, y: number, color: string, size = 1) {
+  const w = 1.5 * size;
+  const h = 5.5 * size;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(x - w, y - h, w * 2, h, 0.8 * size);
+  ctx.fill();
+  poly(
+    ctx,
+    [
+      [x - w, y - h + 0.5],
+      [x + w, y - h + 0.5],
+      [x + w * 0.45, y - h - 2.2 * size],
+      [x - w * 0.45, y - h - 2.2 * size],
+    ],
+    color,
+  );
+  ctx.fillStyle = palette.cream;
+  ctx.fillRect(x - w * 0.5, y - h - 3 * size, w, size);
+  ctx.fillRect(x - w, y - h * 0.62, w * 2, 1.6 * size);
+  ctx.fillStyle = palette.shine;
+  ctx.fillRect(x - w * 0.6, y - h + size, 0.5 * size, h - 2 * size);
+}
+
+/** A row of bottles in mixed flavours, centred on a screen point. */
+function bottles(ctx: Ctx, x: number, y: number, count: number, seed: number, size = 1) {
+  for (let i = 0; i < count; i++)
+    bottle(
+      ctx,
+      x + (i - (count - 1) / 2) * 3.4 * size,
+      y,
+      palette.sodas[(seed + i * 2) % palette.sodas.length],
+      size,
+    );
+}
+
+/** A red soda crate, with a row of bottle caps showing over its rim. */
+function crate(ctx: Ctx, x: number, y: number, z: number, seed: number, w = 0.36, d = 0.24) {
+  const h = 7;
+  box(ctx, x, y, w, d, z, h, palette.crateShade, palette.crate, palette.crateShade);
+  poly(
+    ctx,
+    [
+      at(x + w * 0.3, y + d, z + h * 0.5),
+      at(x + w * 0.7, y + d, z + h * 0.5),
+      at(x + w * 0.7, y + d, z + h * 0.75),
+      at(x + w * 0.3, y + d, z + h * 0.75),
+    ],
+    palette.blackShade,
+  );
+  for (let i = 0; i < 3; i++) {
+    const p = at(x + (w * (i + 0.5)) / 3, y + d / 2, z + h);
+    oval(ctx, p[0], p[1], 1.5, 0.9, palette.sodas[(seed + i) % palette.sodas.length]);
+  }
+}
+
+/** Soda crates stacked `levels` high, with a bottle left on top. */
+function crateStack(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  z: number,
+  levels: number,
+  seed: number,
+  w = 0.3,
+  d = 0.22,
+) {
+  for (let i = 0; i < levels; i++) crate(ctx, x, y, z + i * 7, seed + i, w, d);
+  const top = at(x + w / 2, y + d / 2, z + levels * 7);
+  bottle(ctx, top[0], top[1], palette.sodas[seed % palette.sodas.length], 0.8);
+}
+
+/** A cooler, its lid shut, in one of the soda colours. */
+function cooler(ctx: Ctx, x: number, y: number, seed: number, w = 0.32, d = 0.22) {
+  const body =
+    seed % 2 === 0 ? [palette.soda, palette.sodaShade] : [palette.grape, palette.grapeShade];
+  box(ctx, x, y, w, d, 0, 6, palette.cream, body[0], body[1]);
+  box(
+    ctx,
+    x - 0.02,
+    y - 0.02,
+    w + 0.04,
+    d + 0.04,
+    6,
+    1.5,
+    palette.cream,
+    palette.creamShade,
+    palette.creamShade,
+  );
+}
+
+/**
+ * A little fizz of soda spraying up and falling back from a screen point, a
+ * few drops on a loop. It keeps any fading the caller has set.
+ */
+function spray(ctx: Ctx, x: number, y: number, t: number, color: string, phase = 0) {
+  const alpha = ctx.globalAlpha;
+  for (let i = 0; i < 5; i++) {
+    const s = (((t * 0.7 + phase + i / 5) % 1) + 1) % 1;
+    ctx.globalAlpha = alpha * (1 - s);
+    oval(ctx, x + (i - 2) * 2.4 * s, y - 16 * s + 14 * s * s, 0.9, 0.9, color);
+  }
+  ctx.globalAlpha = alpha;
+}
+
+/** A FAYGO sign, in plane-local coordinates centred on (0, 0). */
+function faygoSign(ctx: Ctx, width: number, height: number) {
+  signBoard(ctx, 'FAYGO', width, height, {
+    board: palette.red,
+    edge: palette.black,
+    text: palette.cream,
+  });
+  for (const side of [-1, 1]) {
+    oval(ctx, side * (width / 2 - 2.5), -height / 2 + 2.5, 1, 1, palette.soda);
+    oval(ctx, side * (width / 2 - 2.5), height / 2 - 2.5, 1, 1, palette.soda);
+  }
+}
+
+// ── Clown face paint ──────────────────────────────────────────────────────
+
+/** How many face-paint patterns there are. */
+const FACE_PAINTS = 4;
+
+/**
+ * Black and white clown face paint on a face centred on (fx, fy), four pixels
+ * across, looking `dir` (-1 left, 1 right, 0 straight on).
+ */
+function facePaint(ctx: Ctx, fx: number, fy: number, dir: number, style: number) {
+  const ink = palette.paintInk;
+  oval(ctx, fx + dir * 0.5, fy + 0.3, 3.3, 3.3, palette.paint);
+  const mx = fx + dir;
+  for (const ex of [mx - 1.5, mx + 1.5]) {
+    if (style === 0) {
+      // Tall diamonds through the eyes.
+      poly(
+        ctx,
+        [
+          [ex, fy - 2.6],
+          [ex + 0.9, fy],
+          [ex, fy + 2.2],
+          [ex - 0.9, fy],
+        ],
+        ink,
+      );
+    } else if (style === 1) {
+      // Black blots with a spike above.
+      oval(ctx, ex, fy, 1.1, 1.1, ink);
+      poly(
+        ctx,
+        [
+          [ex - 0.6, fy - 0.6],
+          [ex + 0.6, fy - 0.6],
+          [ex, fy - 2.8],
+        ],
+        ink,
+      );
+    } else if (style === 2) {
+      // Eyes that drip.
+      poly(
+        ctx,
+        [
+          [ex - 1, fy - 0.8],
+          [ex + 1, fy - 0.8],
+          [ex, fy + 2.4],
+        ],
+        ink,
+      );
+    } else {
+      // Round eyes under arched brows.
+      oval(ctx, ex, fy, 0.8, 1, ink);
+      stroke(
+        ctx,
+        [
+          [ex - 1.1, fy - 1.2],
+          [ex, fy - 2.4],
+          [ex + 1.1, fy - 1.2],
+        ],
+        ink,
+        0.6,
+      );
+    }
+  }
+  const my = fy + 2.1;
+  if (style === 0) {
+    stroke(
+      ctx,
+      [
+        [mx - 2, my - 0.4],
+        [mx, my + 0.3],
+        [mx + 2, my - 0.4],
+      ],
+      ink,
+      0.8,
+    );
+  } else if (style === 1) {
+    oval(ctx, mx, my, 1.5, 0.7, ink);
+  } else if (style === 2) {
+    stroke(
+      ctx,
+      [
+        [mx - 1.8, my],
+        [mx + 1.8, my],
+      ],
+      ink,
+      0.6,
+    );
+    for (const sx of [-1, 0, 1])
+      stroke(
+        ctx,
+        [
+          [mx + sx, my - 0.6],
+          [mx + sx, my + 0.6],
+        ],
+        ink,
+        0.4,
+      );
+  } else {
+    stroke(
+      ctx,
+      [
+        [mx - 2.2, my + 0.6],
+        [mx, my - 0.6],
+        [mx + 2.2, my + 0.6],
+      ],
+      ink,
+      0.8,
+    );
+  }
+}
+
 // ── Ground ────────────────────────────────────────────────────────────────
 
 /** The world-pixel height of the horizon; the field runs off to it. */
@@ -254,8 +487,28 @@ export function groundBounds(map: MidwayMap): Box {
   };
 }
 
-/** The open field round the midway, filling the view from the horizon down. */
+/** How many stars there are in the night sky. */
+const STARS = 40;
+
+/**
+ * The open field round the midway, filling the view from the horizon down,
+ * with a moon and a few stars over it.
+ */
 export function drawField(ctx: Ctx, view: Box) {
+  const width = view.right - view.left;
+  if (view.top < HORIZON) {
+    ctx.fillStyle = palette.moon;
+    for (let i = 0; i < STARS; i++) {
+      ctx.fillRect(view.left + hash(i, 3) * width, HORIZON - 10 - hash(i, 7) * 220, 0.8, 0.8);
+    }
+    const mx = view.left + width * 0.8;
+    const my = Math.max(view.top + 22, HORIZON - 90);
+    if (my < HORIZON - 12) {
+      oval(ctx, mx, my, 12, 12, palette.moon);
+      oval(ctx, mx - 4, my - 3, 2.5, 2.5, palette.moonShade);
+      oval(ctx, mx + 3, my + 4, 3.5, 3.5, palette.moonShade);
+    }
+  }
   ctx.fillStyle = palette.haze;
   ctx.fillRect(view.left, HORIZON, view.right - view.left, 6);
   ctx.fillStyle = palette.grass;
@@ -370,25 +623,33 @@ interface Stripes {
   bShade: string;
 }
 
-const RED: Stripes = {
+/** Crimson and bone white. */
+const BONE: Stripes = {
   a: palette.red,
   aShade: palette.redShade,
   b: palette.cream,
   bShade: palette.creamShade,
 };
-const GOLD: Stripes = {
-  a: palette.gold,
-  aShade: palette.goldShade,
-  b: palette.cream,
-  bShade: palette.creamShade,
+/** Crimson and black, the horror-show stripe. */
+const CRIMSON: Stripes = {
+  a: palette.red,
+  aShade: palette.redShade,
+  b: palette.black,
+  bShade: palette.blackShade,
 };
-const BLUE: Stripes = {
-  a: palette.blue,
-  aShade: palette.blueShade,
-  b: palette.cream,
-  bShade: palette.creamShade,
+const GRAPE: Stripes = {
+  a: palette.grape,
+  aShade: palette.grapeShade,
+  b: palette.black,
+  bShade: palette.blackShade,
 };
-const TENT_COLORS = [GOLD, BLUE, BLUE, RED] as const;
+const SODA: Stripes = {
+  a: palette.soda,
+  aShade: palette.sodaShade,
+  b: palette.black,
+  bShade: palette.blackShade,
+};
+const TENT_COLORS = [GRAPE, CRIMSON, SODA, BONE] as const;
 
 function rimPoint(c: Pt, r: number, angle: number, z: number): Pt {
   return [c[0] + Math.cos(angle) * r * ISO_RX, c[1] + Math.sin(angle) * r * ISO_RY - z];
@@ -529,15 +790,21 @@ function roundTent(
 function bigTop(ctx: Ctx, prop: Prop, t: number) {
   const cx = prop.x + prop.w / 2;
   const cy = prop.y + prop.h / 2;
-  roundTent(ctx, cx, cy, 1.9, 38, 46, RED, t, palette.red);
+  roundTent(ctx, cx, cy, 1.9, 38, 46, CRIMSON, t, palette.soda);
   const c = at(cx, cy);
   // A second ring of bunting, and gold lights round the wall.
   ringFlags(ctx, c, 1.5, 38 + 22, t, 12);
   for (let i = 0; i < 9; i++) {
     const angle = 0.2 + (i / 8) * (Math.PI - 0.4);
     const p = rimPoint(c, 1.92, angle, 10);
-    oval(ctx, p[0], p[1], 1.4, 1.4, Math.sin(t * 4 + i) > 0 ? palette.gold : palette.cream);
+    oval(ctx, p[0], p[1], 1.4, 1.4, Math.sin(t * 4 + i) > 0 ? palette.soda : palette.cream);
   }
+  onPlane(ctx, rimPoint(c, 1.9, Math.PI * 0.22, 26), () => faygoSign(ctx, 30, 10));
+  crateStack(ctx, cx - 0.9, cy + 1.75, 0, 2, 1);
+  crate(ctx, cx - 0.5, cy + 1.72, 0, 3);
+  const door = rimPoint(c, 2.05, Math.PI * 0.62, 0);
+  bottles(ctx, door[0] + 6, door[1] + 2, 3, 2);
+  spray(ctx, door[0] + 6, door[1] - 6, t, palette.soda);
 }
 
 function carousel(ctx: Ctx, prop: Prop, t: number) {
@@ -547,9 +814,9 @@ function carousel(ctx: Ctx, prop: Prop, t: number) {
   const turn = t * 0.5;
   const r = 1.75;
   oval(ctx, c[0] + 8, c[1] + 4, r * ISO_RX * 1.1, r * ISO_RY * 1.1, palette.shadow);
-  cylinder(ctx, c, r, 0, 6, RED, 24);
-  oval(ctx, c[0], c[1] - 6, r * ISO_RX, r * ISO_RY, palette.pink);
-  oval(ctx, c[0], c[1] - 6, r * ISO_RX * 0.82, r * ISO_RY * 0.82, palette.pinkShade);
+  cylinder(ctx, c, r, 0, 6, CRIMSON, 24);
+  oval(ctx, c[0], c[1] - 6, r * ISO_RX, r * ISO_RY, palette.grape);
+  oval(ctx, c[0], c[1] - 6, r * ISO_RX * 0.82, r * ISO_RY * 0.82, palette.grapeShade);
 
   const roofZ = 46;
   const horses = Array.from({ length: 8 }, (_, i) => {
@@ -569,7 +836,7 @@ function carousel(ctx: Ctx, prop: Prop, t: number) {
       1.4,
     );
     const facing = Math.cos(angle + Math.PI / 2) < 0 ? -1 : 1;
-    const color = i % 2 ? palette.cream : palette.woodLight;
+    const color = i % 2 ? palette.cream : palette.grape;
     const hy = y - 16 + bob;
     oval(ctx, x, hy, 6, 3.2, color);
     poly(
@@ -635,7 +902,7 @@ function carousel(ctx: Ctx, prop: Prop, t: number) {
   );
   horses.filter((h) => Math.sin(h.angle) >= 0).forEach(drawHorse);
 
-  dome(ctx, c, r * 1.15, roofZ, 26, RED, turn);
+  dome(ctx, c, r * 1.15, roofZ, 26, BONE, turn);
   scallopRing(ctx, c, r * 1.15, roofZ, 14, 4, [palette.red, palette.cream]);
   ringFlags(ctx, c, r * 1.05, roofZ - 6, t, 16);
   knob(ctx, c[0], c[1] - roofZ - 26);
@@ -646,7 +913,7 @@ function carousel(ctx: Ctx, prop: Prop, t: number) {
 
 /** A tent with a ridged roof running along the x axis. */
 function peakedTent(ctx: Ctx, prop: Prop, t: number) {
-  const colors = prop.variant % 2 === 0 ? BLUE : RED;
+  const colors = prop.variant % 2 === 0 ? GRAPE : CRIMSON;
   const x0 = prop.x + 0.2;
   const x1 = prop.x + prop.w - 0.2;
   const y0 = prop.y + 0.25;
@@ -729,8 +996,14 @@ function peakedTent(ctx: Ctx, prop: Prop, t: number) {
   flags(ctx, eaveLine, t, 3.5, prop.x);
   const ridgeFront = at(x1 + 0.1, ym, wall + roof);
   const ridgeBack = at(x0 - 0.1, ym, wall + roof);
-  flag(ctx, ridgeBack[0], ridgeBack[1], t, palette.gold);
+  flag(ctx, ridgeBack[0], ridgeBack[1], t, palette.soda);
   flag(ctx, ridgeFront[0], ridgeFront[1], t + 1, palette.red);
+  // It doubles as a soda stall: a FAYGO sign on the side, and stock by the door.
+  onPlane(ctx, at((x0 + x1) / 2, y1 + eave, wall - 14), () => faygoSign(ctx, 34, 11));
+  crateStack(ctx, x1 + 0.01, y1 - 0.4, 0, 3, prop.variant + 2, 0.18, 0.3);
+  cooler(ctx, x1 + 0.01, y0 + 0.05, prop.variant, 0.18, 0.3);
+  const fizz = at(x1 + 0.12, ym + 0.55);
+  bottles(ctx, fizz[0], fizz[1], 2, prop.variant + 4);
 }
 
 function wheel(ctx: Ctx, x: number, y: number, r: number) {
@@ -743,13 +1016,17 @@ function wagon(ctx: Ctx, prop: Prop) {
   const body =
     prop.variant % 2 === 0
       ? { top: palette.red, left: palette.red, right: palette.redShade }
-      : { top: palette.blue, left: palette.blue, right: palette.blueShade };
+      : { top: palette.black, left: palette.black, right: palette.blackShade };
   const x = prop.x + 0.1;
   const y = prop.y + 0.1;
   const w = prop.w - 0.2;
   const d = prop.h - 0.25;
   poly(ctx, rectPoints({ x: x + 0.3, y: y + 0.3, w, h: d }), palette.shadow);
   box(ctx, x, y, w, d, 7, 24, body.top, body.left, body.right);
+  // Soda stacked inside, behind the bars.
+  for (let i = 0; i < 3; i++) crate(ctx, x + 0.4 + i * 0.75, y + d - 0.3, 7, prop.variant + i);
+  const shelf = at(x + w / 2, y + d, 18);
+  bottles(ctx, shelf[0], shelf[1], 6, prop.variant, 1.1);
   // Cage bars along the side.
   for (let i = 1; i < 14; i++) {
     const bx = lerp(x + 0.3, x + w - 0.3, i / 14);
@@ -825,6 +1102,14 @@ function person(
   ctx.beginPath();
   ctx.roundRect(x - 4, y - 16.5, 8, 9.5, 3);
   ctx.fill();
+  if (look.accent) {
+    // A bright stripe across the chest, or a hatchet-man print on the back.
+    if (options.back) oval(ctx, x, y - 12.5, 1.6, 2.2, look.accent);
+    else {
+      ctx.fillStyle = look.accent;
+      ctx.fillRect(x - 4, y - 13, 8, 1.6);
+    }
+  }
   stroke(
     ctx,
     [
@@ -843,13 +1128,16 @@ function person(
     look.skin,
     2,
   );
+  if (look.bottle) bottle(ctx, x + 5 + swing, y - 6.5, look.bottle, 0.75);
   oval(ctx, x, y - 20.5, 4, 4, look.skin);
+  const painted = look.paint !== undefined && !options.back;
+  if (painted) facePaint(ctx, x, y - 20, dir, look.paint!);
   ctx.fillStyle = look.hair;
   ctx.beginPath();
   if (options.back) ctx.arc(x, y - 20.8, 4.2, 0, Math.PI * 2);
   else ctx.arc(x, y - 21, 4.2, Math.PI * 1.05, Math.PI * 1.95);
   ctx.fill();
-  if (!options.back) {
+  if (!options.back && !painted) {
     oval(ctx, x - 1.5 + dir, y - 20.3, 0.6, 0.7, palette.ink);
     oval(ctx, x + 1.5 + dir, y - 20.3, 0.6, 0.7, palette.ink);
   }
@@ -893,15 +1181,18 @@ function cart(ctx: Ctx, prop: Prop, t: number) {
   const look = visitorLook(prop.x + prop.y);
   // The vendor stands behind the cart.
   const vendor = at(prop.x + 0.5, prop.y + 0.12);
-  person(ctx, vendor[0], vendor[1], { ...look, shirt: palette.cream, cap: palette.red });
+  person(ctx, vendor[0], vendor[1], { ...look, shirt: palette.black, cap: palette.red });
+  crateStack(ctx, prop.x + 0.66, prop.y + 0.02, 0, kind === 3 ? 3 : 1, prop.x + kind);
   poly(ctx, rectPoints({ x: x + 0.15, y: y + 0.15, w, h: d }), palette.shadow);
 
   const body =
     kind === 0
       ? { top: palette.cream, left: palette.red, right: palette.redShade }
       : kind === 1
-        ? { top: palette.cream, left: palette.pink, right: palette.pinkShade }
-        : { top: palette.cream, left: palette.blue, right: palette.blueShade };
+        ? { top: palette.cream, left: palette.grape, right: palette.grapeShade }
+        : kind === 2
+          ? { top: palette.cream, left: palette.soda, right: palette.sodaShade }
+          : { top: palette.cream, left: palette.black, right: palette.blackShade };
   box(ctx, x, y, w, d, 5, 14, body.top, body.left, body.right);
   stripedWall(ctx, { x, y: y + d }, { x: x + w, y: y + d }, 9, 3, 6, [palette.cream, body.left]);
   const wheelAt = at(x + w * 0.3, y + d + 0.02, 5);
@@ -944,12 +1235,12 @@ function cart(ctx: Ctx, prop: Prop, t: number) {
         palette.cream,
         1,
       );
-      oval(ctx, sx, top[1] - 13 + bob, 4.5, 4.5, palette.pink);
+      oval(ctx, sx, top[1] - 13 + bob, 4.5, 4.5, palette.grape);
       oval(ctx, sx - 1.5, top[1] - 14.5 + bob, 1.8, 1.8, palette.cream);
     }
   } else if (kind === 2) {
     stroke(ctx, [top, [top[0], top[1] - 22]], palette.metalShade, 1.2);
-    dome(ctx, [top[0], top[1] - 18], 0.75, 0, 9, BLUE, 0, 10);
+    dome(ctx, [top[0], top[1] - 18], 0.75, 0, 9, SODA, 0, 10);
     for (let i = 0; i < 3; i++)
       oval(
         ctx,
@@ -957,51 +1248,27 @@ function cart(ctx: Ctx, prop: Prop, t: number) {
         top[1] - 2,
         2.5,
         2.5,
-        [palette.pink, palette.cream, palette.woodLight][i],
+        [palette.grape, palette.cream, palette.soda][i],
       );
   } else {
-    // A giant drink on the roof.
-    const [cx, cy] = top;
-    poly(
-      ctx,
-      [
-        [cx - 5, cy],
-        [cx + 5, cy],
-        [cx + 7, cy - 16],
-        [cx - 7, cy - 16],
-      ],
-      palette.red,
-    );
-    poly(
-      ctx,
-      [
-        [cx - 5.5, cy - 6],
-        [cx + 5.5, cy - 6],
-        [cx + 6, cy - 10],
-        [cx - 6, cy - 10],
-      ],
-      palette.cream,
-    );
-    oval(ctx, cx, cy - 16, 7, 2, palette.cream);
-    stroke(
-      ctx,
-      [
-        [cx + 1, cy - 16],
-        [cx + 4, cy - 24],
-      ],
-      palette.cream,
-      1.5,
-    );
+    // A giant bottle of Faygo on the roof, fizzing over.
+    bottle(ctx, top[0], top[1], palette.sodas[(prop.x + prop.y) % palette.sodas.length], 2.6);
+    spray(ctx, top[0], top[1] - 22, t, palette.soda, prop.x * 0.37);
+    const front = at(x + w / 2, y + d + 0.12);
+    bottles(ctx, front[0], front[1], 3, prop.y);
   }
-
-  // A little sign above it all.
+  // A soda cooler by every cart.
+  cooler(ctx, prop.x + 0.02, prop.y + 0.76, prop.x);
+  // A little sign above it all; the drinks cart only sells Faygo.
   const sign = at(prop.x + 0.5, prop.y + 0.5, kind === 2 ? 50 : 42);
   onPlane(ctx, sign, () =>
-    signBoard(ctx, CART_KINDS[kind].toUpperCase(), 30, 9, {
-      board: palette.board,
-      edge: palette.woodDark,
-      text: palette.ink,
-    }),
+    kind === 3
+      ? faygoSign(ctx, 30, 9)
+      : signBoard(ctx, CART_KINDS[kind].toUpperCase(), 30, 9, {
+          board: palette.board,
+          edge: palette.red,
+          text: palette.cream,
+        }),
   );
 }
 
@@ -1026,13 +1293,26 @@ function ticketBooth(ctx: Ctx, prop: Prop) {
     poly(
       ctx,
       [at(xa, y + 0.7, 23), at(xb, y + 0.7, 23), at(xb, y + 0.95, 17), at(xa, y + 0.95, 17)],
-      i % 2 ? palette.cream : palette.blue,
+      i % 2 ? palette.cream : palette.black,
     );
   }
-  box(ctx, x - 0.05, y - 0.05, 0.8, 0.8, 26, 3, palette.blue, palette.blueShade, palette.blueShade);
+  box(
+    ctx,
+    x - 0.05,
+    y - 0.05,
+    0.8,
+    0.8,
+    26,
+    3,
+    palette.black,
+    palette.blackShade,
+    palette.blackShade,
+  );
   onPlane(ctx, at(x + 0.35, y + 0.35, 38), () =>
     signBoard(ctx, 'TICKETS', 28, 9, { board: palette.gold, edge: palette.red, text: palette.red }),
   );
+  const step = at(x + 0.85, y + 0.85);
+  bottles(ctx, step[0], step[1], 3, prop.x);
 }
 
 function bench(ctx: Ctx, prop: Prop) {
@@ -1042,6 +1322,8 @@ function bench(ctx: Ctx, prop: Prop) {
     box(ctx, lx, y + 0.05, 0.05, 0.2, 0, 6, palette.woodDark, palette.woodDark, palette.woodDark);
   box(ctx, x, y, 0.76, 0.26, 6, 2, palette.woodLight, palette.wood, palette.woodDark);
   box(ctx, x, y - 0.02, 0.76, 0.06, 8, 7, palette.woodLight, palette.wood, palette.woodDark);
+  const seat = at(x + 0.6, y + 0.15, 8);
+  bottle(ctx, seat[0], seat[1], palette.sodas[(prop.x + prop.y) % palette.sodas.length], 0.8);
 }
 
 function planter(ctx: Ctx, prop: Prop) {
@@ -1075,9 +1357,9 @@ function balloons(ctx: Ctx, prop: Prop, t: number) {
     0.16,
     0,
     4,
-    palette.blue,
-    palette.blueShade,
-    palette.blueShade,
+    palette.black,
+    palette.blackShade,
+    palette.blackShade,
   );
   for (let i = 0; i < 3; i++) {
     const bob = Math.sin(t * 1.8 + i + prop.x) * 1.5;
@@ -1231,9 +1513,11 @@ function buntingPole(ctx: Ctx, prop: Prop) {
         [x + 1.3, y - z - 5],
         [x - 1.3, y - z - 3],
       ],
-      palette.red,
+      palette.black,
     );
   knob(ctx, x, y - POLE_HEIGHT - 1);
+  if ((prop.x + prop.y) % 2 === 0)
+    onPlane(ctx, [x, y - POLE_HEIGHT + 12], () => faygoSign(ctx, 24, 8));
 }
 
 /** Bunting between the poles, skipping any strung outside the view. */
@@ -1329,7 +1613,7 @@ function ferrisWheel(ctx: Ctx, prop: Prop, t: number) {
       stroke(ctx, [hubAt(side), onWheel(side, angle)], palette.cream, 1.4);
     }
     ring(side, radius * 0.6, palette.gold, 4);
-    ring(side, radius, side > 0 ? palette.blue : palette.blueShade, 4.5);
+    ring(side, radius, side > 0 ? palette.grape : palette.grapeShade, 4.5);
   }
   stroke(ctx, [hubAt(-spread), hubAt(spread)], palette.woodDark, 4);
   const hub = hubAt(spread);
@@ -1343,28 +1627,28 @@ function ferrisWheel(ctx: Ctx, prop: Prop, t: number) {
 
 const BOOTH_SCHEMES = [
   {
-    wall: palette.gold,
-    wallShade: palette.goldShade,
-    awning: [palette.blue, palette.cream],
-    awningShade: [palette.blueShade, palette.creamShade],
-  },
-  {
-    wall: palette.cream,
-    wallShade: palette.creamShade,
+    wall: palette.black,
+    wallShade: palette.blackShade,
     awning: [palette.red, palette.cream],
     awningShade: [palette.redShade, palette.creamShade],
   },
   {
-    wall: palette.sky2,
-    wallShade: palette.blue,
-    awning: [palette.gold, palette.cream],
-    awningShade: [palette.goldShade, palette.creamShade],
+    wall: palette.cream,
+    wallShade: palette.creamShade,
+    awning: [palette.red, palette.black],
+    awningShade: [palette.redShade, palette.blackShade],
   },
   {
-    wall: palette.pink,
-    wallShade: palette.pinkShade,
-    awning: [palette.red, palette.gold],
-    awningShade: [palette.redShade, palette.goldShade],
+    wall: palette.grape,
+    wallShade: palette.grapeShade,
+    awning: [palette.soda, palette.black],
+    awningShade: [palette.sodaShade, palette.blackShade],
+  },
+  {
+    wall: palette.red,
+    wallShade: palette.redShade,
+    awning: [palette.black, palette.cream],
+    awningShade: [palette.blackShade, palette.creamShade],
   },
 ] as const;
 const CLOSED_SCHEME = {
@@ -1399,6 +1683,7 @@ function booth(ctx: Ctx, slot: BoothSlot, name: string, t: number, glow: boolean
   const wall = BOOTH_WALL;
 
   poly(ctx, rectPoints({ x: x0 + 0.35, y: y0 + 0.35, w: s, h: s }), palette.shadow);
+  if (open) crateStack(ctx, x0 - 0.1, y0 + s - 0.2, 0, 2, slot.index, 0.2, 0.3);
   box(ctx, x0, y0, s, s, 0, wall, scheme.wall, scheme.wall, scheme.wallShade);
 
   // A window and counter on both faces we can see.
@@ -1446,6 +1731,20 @@ function booth(ctx: Ctx, slot: BoothSlot, name: string, t: number, glow: boolean
       palette.woodDark,
     );
   });
+
+  if (open) {
+    // Faygo for sale on the front counter, and a fizz over it.
+    const counter = at(x0 + 0.35, y1 + 0.07, 9);
+    bottles(ctx, counter[0], counter[1], 3, slot.index);
+    spray(
+      ctx,
+      counter[0],
+      counter[1] - 7,
+      t,
+      palette.sodas[slot.index % palette.sodas.length],
+      slot.index * 0.29,
+    );
+  }
 
   box(
     ctx,
@@ -1534,7 +1833,7 @@ function booth(ctx: Ctx, slot: BoothSlot, name: string, t: number, glow: boolean
     );
     if (open) {
       for (let i = 0; i < 8; i++) {
-        ctx.fillStyle = Math.sin(t * 5 + i * 1.3) > -0.2 ? palette.gold : palette.goldShade;
+        ctx.fillStyle = Math.sin(t * 5 + i * 1.3) > -0.2 ? palette.soda : palette.sodaShade;
         ctx.beginPath();
         ctx.arc(-28 + i * (56 / 7), -10, 1.2, 0, Math.PI * 2);
         ctx.fill();
@@ -1596,23 +1895,35 @@ export interface Look {
   shirt: string;
   pants: string;
   cap?: string;
+  /** A bright accent on the shirt. */
+  accent?: string;
+  /** Which clown face paint they wear, if any. */
+  paint?: number;
+  /** The colour of the soda they carry, if any. */
+  bottle?: string;
 }
 
+/** Most visitors wear clown face paint; one in three carries a soda. */
 export function visitorLook(n: number): Look {
   return {
     skin: palette.skins[n % palette.skins.length],
     hair: palette.hairs[(n * 3 + 1) % palette.hairs.length],
     shirt: palette.shirts[(n * 2 + 1) % palette.shirts.length],
     pants: palette.pants[n % palette.pants.length],
+    accent: palette.accents[(n * 7 + 2) % palette.accents.length],
+    paint: n % 6 === 5 ? undefined : (n * 5 + 1) % FACE_PAINTS,
+    bottle: n % 3 === 0 ? palette.sodas[(n * 5) % palette.sodas.length] : undefined,
   };
 }
 
 export const PLAYER_LOOK: Look = {
   skin: palette.skins[0],
   hair: palette.hairs[2],
-  shirt: palette.red,
+  shirt: palette.black,
   pants: palette.pants[0],
-  cap: palette.gold,
+  cap: palette.red,
+  accent: palette.soda,
+  paint: 0,
 };
 
 export function drawWalker(ctx: Ctx, walker: Walker, look: Look, player = false, t = 0) {
@@ -1644,36 +1955,64 @@ export function drawArch(ctx: Ctx, map: MidwayMap, t: number) {
   const y = map.height - 0.75;
   const left = map.avenueX + ARCH_LEFT;
   const right = map.avenueX + ARCH_RIGHT;
-  for (const px of [left, right])
-    box(
-      ctx,
-      px,
-      y - 0.15,
-      0.26,
-      0.26,
-      0,
-      ARCH_HEIGHT,
-      palette.woodLight,
-      palette.wood,
-      palette.woodDark,
-    );
+  crateStack(ctx, left - 0.42, y - 0.12, 0, 3, 0);
+  crateStack(ctx, right + 0.36, y - 0.12, 0, 2, 3);
+  for (const px of [left, right]) {
+    for (let z = 0; z < ARCH_HEIGHT; z += 8)
+      box(
+        ctx,
+        px,
+        y - 0.15,
+        0.26,
+        0.26,
+        z,
+        Math.min(8, ARCH_HEIGHT - z),
+        palette.cream,
+        z % 16 === 0 ? palette.red : palette.black,
+        z % 16 === 0 ? palette.redShade : palette.blackShade,
+      );
+    onPlane(ctx, at(px + 0.13, y + 0.13, ARCH_HEIGHT - 22), () => faygoSign(ctx, 22, 8));
+  }
   const centre = at((left + right + 0.26) / 2, y, ARCH_HEIGHT + 2);
   onPlane(ctx, centre, () => {
-    ctx.fillStyle = palette.gold;
+    // A grinning clown face over the gate.
+    ctx.fillStyle = palette.black;
     ctx.beginPath();
-    ctx.ellipse(0, -10, 18, 14, 0, Math.PI, Math.PI * 2);
+    ctx.ellipse(0, -10, 19, 15, 0, Math.PI, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = palette.red;
+    ctx.fillStyle = palette.paint;
     ctx.beginPath();
-    ctx.ellipse(0, -10, 12, 9, 0, Math.PI, Math.PI * 2);
+    ctx.ellipse(0, -10, 15, 12, 0, Math.PI, Math.PI * 2);
     ctx.fill();
+    for (const ex of [-6, 6])
+      poly(
+        ctx,
+        [
+          [ex, -21],
+          [ex + 2.2, -16],
+          [ex, -11],
+          [ex - 2.2, -16],
+        ],
+        palette.paintInk,
+      );
+    oval(ctx, 0, -14, 2.4, 2.4, palette.red);
+    stroke(
+      ctx,
+      [
+        [-7, -12],
+        [0, -10.5],
+        [7, -12],
+      ],
+      palette.paintInk,
+      1.4,
+    );
     signBoard(ctx, 'FAKE-ROLLER-COASTER-TYCOON', 92, 20, {
-      board: palette.wood,
-      edge: palette.woodDark,
-      text: palette.gold,
+      board: palette.black,
+      edge: palette.red,
+      text: palette.cream,
     });
     for (let i = 0; i < 14; i++) {
-      ctx.fillStyle = Math.sin(t * 5 - i * 0.8) > 0 ? palette.cream : palette.goldShade;
+      ctx.fillStyle = Math.sin(t * 5 - i * 0.8) > 0 ? palette.soda : palette.grape;
       ctx.beginPath();
       ctx.arc(-44 + i * (88 / 13), 13.5, 1.3, 0, Math.PI * 2);
       ctx.fill();
@@ -1681,7 +2020,7 @@ export function drawArch(ctx: Ctx, map: MidwayMap, t: number) {
   });
   for (const px of [left, right]) {
     const top = at(px + 0.13, y - 0.02, ARCH_HEIGHT);
-    flag(ctx, top[0], top[1], t + px, palette.red);
+    flag(ctx, top[0], top[1], t + px, px === left ? palette.red : palette.soda);
   }
 }
 
@@ -1749,7 +2088,7 @@ export function drawProp(ctx: Ctx, prop: Prop, t: number) {
         34,
         colors,
         t,
-        prop.variant % 2 ? palette.blue : palette.gold,
+        prop.variant % 2 ? palette.soda : palette.grape,
       );
     }
     case 'peaked-tent':
