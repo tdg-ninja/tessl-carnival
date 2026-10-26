@@ -336,9 +336,12 @@ kbd {
   display: block;
   width: 100%;
   height: auto;
-  border: 3px solid var(--color-stripeB);
   border-radius: var(--radius);
-  box-shadow: 6px 6px 0 var(--color-grape);
+  /* A shadow ring, not a border, so the canvas box stays the drawable area
+     the games map pointer coordinates onto. */
+  box-shadow:
+    0 0 0 3px var(--color-stripeB),
+    6px 6px 0 3px var(--color-grape);
   cursor: crosshair;
   touch-action: none;
 }
