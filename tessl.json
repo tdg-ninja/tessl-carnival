@@ -8,5 +8,17 @@
   },
   "agents": [
     "codex"
-  ]
+  ],
+  "schedules": {
+    "doc-gardening": {
+      "cron": "0 6 * * 1",
+      "description": "Find docs and agent instructions that no longer match the code and file issues.",
+      "action": {
+        "skill": "file:tessl-factory#doc-gardening",
+        "environment": "factory-tdg-personal-tessl-carnival-implement",
+        "agent": "claude-code",
+        "model": "deepseek-v4.1-flash"
+      }
+    }
+  }
 }
