@@ -166,10 +166,11 @@ function draw(ctx: CanvasRenderingContext2D, state: RingTossState, aim: { x: num
   for (const bottle of state.bottles) {
     ctx.fillStyle = colors.water;
     ctx.fillRect(bottle.x - 14, bottle.y + 6, 28, 28);
-    ctx.fillRect(bottle.x - 5, bottle.y - 6, 10, 14);
+    // The neck's opening is centred on (x, y), the point bottleAt scores against.
+    ctx.fillRect(bottle.x - 5, bottle.y, 10, 8);
     ctx.fillStyle = colors.surface;
     ctx.beginPath();
-    ctx.arc(bottle.x, bottle.y - 6, 5, 0, Math.PI * 2);
+    ctx.arc(bottle.x, bottle.y, 5, 0, Math.PI * 2);
     ctx.fill();
     for (let i = 0; i < bottle.rings; i++) drawRing(ctx, bottle.x, bottle.y + 4 - i * 3);
   }
