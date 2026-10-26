@@ -3,32 +3,38 @@
  * their own values, so every booth on the midway looks like it belongs.
  */
 export const theme = {
+  // A horror-carnival poster: near-black and charcoal, bone white, crimson
+  // stripes, a grape accent and soda-green highlights.
   colors: {
-    background: '#1b1035',
-    surface: '#2a1a52',
-    text: '#fff8e7',
-    muted: '#b9a9d9',
-    accent: '#ffcc33',
-    danger: '#ff5a5f',
-    stripeA: '#e63946',
-    stripeB: '#fff8e7',
-    water: '#5ec8f2',
-    wood: '#8a5a3b',
+    background: '#0e0c11',
+    surface: '#26222b',
+    text: '#f3ecdc',
+    muted: '#bcb2c8',
+    accent: '#46f26a',
+    danger: '#ff3355',
+    stripeA: '#c8102e',
+    stripeB: '#f3ecdc',
+    water: '#3fd0ff',
+    wood: '#9a6844',
+    grape: '#8a3fd1',
   },
   font: {
-    family: '"Trebuchet MS", "Segoe UI", system-ui, sans-serif',
+    // Heavy poster type for canvas text and headings, all local system fonts.
+    family: 'Impact, Haettenschweiler, "Arial Narrow Bold", "Franklin Gothic Bold", sans-serif',
+    // Readable type for longer HTML text.
+    textFamily: '"Trebuchet MS", "Segoe UI", system-ui, sans-serif',
     small: 14,
     body: 18,
     title: 32,
   },
-  radius: 12,
+  radius: 4,
   canvas: {
     width: 800,
     height: 500,
   },
 } as const;
 
-/** Canvas font string, e.g. canvasFont('title') → 'bold 32px "Trebuchet MS", …'. */
+/** Canvas font string, e.g. canvasFont('title') → 'bold 32px Impact, …'. */
 export function canvasFont(size: 'small' | 'body' | 'title', weight: 'normal' | 'bold' = 'normal') {
   return `${weight} ${theme.font[size]}px ${theme.font.family}`;
 }
@@ -39,5 +45,6 @@ export function applyTheme(root: HTMLElement = document.documentElement) {
     root.style.setProperty(`--color-${name}`, value);
   }
   root.style.setProperty('--font-family', theme.font.family);
+  root.style.setProperty('--font-text', theme.font.textFamily);
   root.style.setProperty('--radius', `${theme.radius}px`);
 }
