@@ -1,5 +1,5 @@
 {
-  "name": "tessl-carnival",
+  "name": "tdg-personal/tessl-carnival",
   "mode": "vendored",
   "dependencies": {
     "tessl-labs/factory-setup": {
