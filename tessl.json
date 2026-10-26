@@ -1,0 +1,12 @@
+{
+  "name": "tdg-personal/tessl-carnival",
+  "mode": "vendored",
+  "dependencies": {
+    "tessl-labs/factory-setup": {
+      "version": "0.19.1"
+    }
+  },
+  "agents": [
+    "codex"
+  ]
+}
