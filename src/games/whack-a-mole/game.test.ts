@@ -34,6 +34,17 @@ describe('whack-a-mole', () => {
     expect(state.holes.filter((hole) => hole.up > 0)).toHaveLength(1);
   });
 
+  it('times a mole from when it popped up, not from the end of a long step', () => {
+    const once = createState();
+    step(once, 1.5, first);
+    const twice = createState();
+    step(twice, 1, first);
+    step(twice, 0.5, first);
+    expect(once.holes[0].up).toBeGreaterThan(0);
+    expect(once.holes[0].up).toBeCloseTo(twice.holes[0].up, 10);
+    expect(once.nextPop).toBeCloseTo(twice.nextPop, 10);
+  });
+
   it('drops a mole back down when its time is up', () => {
     const state = createState();
     state.holes[0].up = 0.5;

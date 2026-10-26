@@ -105,11 +105,16 @@ export function step(state: WhackAMoleState, dt: number, random: () => number = 
 
   state.nextPop -= dt;
   while (state.nextPop <= 0) {
+    // This mole popped up `late` seconds ago, partway through `dt`: time it
+    // from then, so one long step plays out like several short ones.
+    const late = -state.nextPop;
+    const then = { ...state, timeLeft: state.timeLeft + late };
+    const up = upTime(then) - late;
     const empty = state.holes.filter((hole) => hole.up === 0 && hole.hit === 0);
-    if (empty.length > 0) {
-      empty[Math.floor(random() * empty.length)].up = upTime(state);
+    if (up > 0 && empty.length > 0) {
+      empty[Math.floor(random() * empty.length)].up = up;
     }
-    state.nextPop += spawnInterval(state);
+    state.nextPop += spawnInterval(then);
   }
 }
 
